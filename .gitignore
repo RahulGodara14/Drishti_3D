@@ -1,0 +1,50 @@
+# Python virtual environment & interpreter
+.venv/
+venv/
+env/
+ENV/
+*.py[cod]
+*$py.class
+__pycache__/
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node & Frontend dependencies & bundles
+node_modules/
+apps/web/node_modules/
+apps/web/dist/
+.npm_cache/
+.npm/
+.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# User-uploaded flight surveys, raw video footage & runtime caches
+# Keep directory structure with .gitkeep
+storage/projects/*
+!storage/projects/.gitkeep
+output/
+demo_data/
+demo_output_real/
+
+# Media & Heavy Binary Assets (>100MB Git limitation)
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.wmv
+*.flv
+*.webm
+
+# System, OS & IDE Configurations
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
+*.swo
+*.log
