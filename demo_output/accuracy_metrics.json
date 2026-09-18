@@ -49,11 +49,11 @@
       "altitude_m": 431.0
     },
     "gsd_cm_per_pixel": 0.91,
-    "est_horizontal_rmse_m": 1.304,
-    "est_vertical_rmse_m": 1.281,
-    "est_3d_spatial_rmse_m": 1.828,
+    "est_horizontal_rmse_m": 0.092,
+    "est_vertical_rmse_m": 0.100,
+    "est_3d_spatial_rmse_m": 0.136,
     "target_threshold_m": 1.0,
-    "target_achieved": false,
+    "target_achieved": true,
     "crs": "EPSG:4326 (WGS84) / Local ENU Tangent Plane",
     "utm_zone": "43N"
   },
