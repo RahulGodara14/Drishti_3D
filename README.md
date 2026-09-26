@@ -257,5 +257,5 @@ For teams looking to retrain the neural depth or semantic masking models on cust
 ---
 
 ## 👥 Authors & Acknowledgments
-- **Team SFM-X** — Smart India Hackathon (SIH 2026)
+- **Team Alien-X** — Smart India Hackathon (SIH 2026)
 - Built with FastAPI, Three.js, OpenCV, NumPy, SciPy, and React.
