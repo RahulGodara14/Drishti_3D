@@ -141,7 +141,7 @@ export default function App() {
       } catch (err) {
         console.error("Poll error:", err);
       }
-    }, 1000);
+    }, 500);
   };
 
   const handleRerunPipeline = () => {

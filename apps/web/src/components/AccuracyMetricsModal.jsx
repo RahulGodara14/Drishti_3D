@@ -11,7 +11,7 @@ export default function AccuracyMetricsModal({ isOpen, onClose, metrics }) {
   const target = metrics?.georeferencing?.target_threshold_m || 1.0;
 
   const handleDownloadPLY = () => {
-    window.open('http://127.0.0.1:8000/api/projects/sih-demo-jaipur/pointcloud', '_blank');
+    window.open('/api/projects/sih-demo-jaipur/pointcloud', '_blank');
   };
 
   const handleDownloadReport = () => {

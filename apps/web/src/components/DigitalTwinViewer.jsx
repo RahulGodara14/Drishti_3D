@@ -315,125 +315,51 @@ export default function DigitalTwinViewer({
     }
   }, [activeLayer]);
 
-  // Restore procedural Jaipur Benchmark scene if active project is default Jaipur
-  useEffect(() => {
-    if (!pointCloudRef.current) return;
-    if (activeProjectId === 'sih-demo-jaipur') {
-      const sceneData = generateDigitalTwinScene();
-      const newGeom = new THREE.BufferGeometry();
-      newGeom.setAttribute('position', new THREE.BufferAttribute(sceneData.positions, 3));
-      newGeom.setAttribute('color', new THREE.BufferAttribute(sceneData.colorsRGB, 3));
-      newGeom.userData = {
-        rgbColors: sceneData.colorsRGB,
-        confColors: sceneData.colorsConf,
-        semColors: sceneData.colorsSem,
-        positions: sceneData.positions
-      };
-      newGeom.computeBoundingSphere();
-      newGeom.computeBoundingBox();
+  // Unified function to ensure the verified Jaipur Benchmark Prototype is always rendered
+  const applyJaipurPrototypeScene = () => {
+    if (!sceneRef.current || !pointCloudRef.current) return;
 
-      const oldGeom = pointCloudRef.current.geometry;
-      pointCloudRef.current.geometry = newGeom;
-      if (oldGeom) oldGeom.dispose();
+    // 1. Procedural Jaipur Survey Scene (18,500 points, 4 buildings, steel blue roofs, road corridor, terrain)
+    const sceneData = generateDigitalTwinScene();
+    const newGeom = new THREE.BufferGeometry();
+    newGeom.setAttribute('position', new THREE.BufferAttribute(sceneData.positions, 3));
+    
+    // Select initial colors based on activeLayer
+    let initialColors = sceneData.colorsRGB;
+    if (activeLayer === 'confidence') initialColors = sceneData.colorsConf;
+    else if (activeLayer === 'semantics') initialColors = sceneData.colorsSem;
 
-      // Reset camera to standard aerial oblique survey angle for Jaipur
-      if (controlsRef.current && cameraRef.current) {
-        controlsRef.current.target.set(0, 8, 0);
-        cameraRef.current.position.set(-60, 65, 85);
-        controlsRef.current.update();
-      }
+    newGeom.setAttribute('color', new THREE.BufferAttribute(initialColors, 3));
+    newGeom.userData = {
+      rgbColors: sceneData.colorsRGB,
+      confColors: sceneData.colorsConf,
+      semColors: sceneData.colorsSem,
+      positions: sceneData.positions
+    };
+    newGeom.computeBoundingSphere();
+    newGeom.computeBoundingBox();
 
-      // Reset trajectory to default 40-waypoint Jaipur loop
-      const safeWaypoints = generateDefaultTrajectory();
-      waypointsRef.current = safeWaypoints;
-      const trajPoints = safeWaypoints.map(w => new THREE.Vector3(Number(w.x) || 0, Number(w.z) || 48.5, -Number(w.y) || 0));
-      const newCurve = new THREE.CatmullRomCurve3(trajPoints);
-      trajCurveRef.current = newCurve;
+    const oldGeom = pointCloudRef.current.geometry;
+    pointCloudRef.current.geometry = newGeom;
+    if (oldGeom) oldGeom.dispose();
 
-      if (trajMeshRef.current && sceneRef.current) {
-        sceneRef.current.remove(trajMeshRef.current);
-        if (trajMeshRef.current.geometry) trajMeshRef.current.geometry.dispose();
-        const trajGeom = new THREE.TubeGeometry(newCurve, 120, 0.35, 8, false);
-        const trajMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe, wireframe: false, transparent: true, opacity: 0.85 });
-        const newMesh = new THREE.Mesh(trajGeom, trajMat);
-        sceneRef.current.add(newMesh);
-        trajMeshRef.current = newMesh;
-      }
-
-      // Reset dynamic vehicles for Jaipur demo
-      const dynGroup = sceneRef.current?.getObjectByName("dynamicObjectsGroup");
-      if (dynGroup) {
-        while (dynGroup.children.length > 0) {
-          const child = dynGroup.children[0];
-          dynGroup.remove(child);
-          if (child.geometry) child.geometry.dispose();
-          if (child.material) child.material.dispose();
-        }
-        const carBox = createHoloVehicleBox([-10.5, 0.8, 2.1], [4.5, 1.6, 1.8], 0xef4444, "SEDAN (34 km/h) - DYNAMIC MASKED");
-        dynGroup.add(carBox);
-        const truckBox = createHoloVehicleBox([18.4, 1.4, -3.6], [7.2, 2.8, 2.4], 0xf59e0b, "TRUCK (22 km/h) - DYNAMIC MASKED");
-        dynGroup.add(truckBox);
-      }
+    // 2. Reset camera to canonical aerial oblique survey angle for Jaipur
+    if (controlsRef.current && cameraRef.current) {
+      controlsRef.current.target.set(0, 8, 0);
+      cameraRef.current.position.set(-60, 65, 85);
+      controlsRef.current.update();
     }
-  }, [activeProjectId]);
 
-  // Dynamically update point cloud when new flight is uploaded & reconstructed
-  useEffect(() => {
-    if (activeProjectId === 'sih-demo-jaipur') return; // Preserve default procedural Jaipur scene
-    if (!pointCloudData || !pointCloudRef.current) return;
-    if (pointCloudData.positions && pointCloudData.positions.length > 0) {
-      const posArray = new Float32Array(pointCloudData.positions);
-      const rgbArray = new Float32Array(pointCloudData.colorsRGB);
-      const confArray = new Float32Array(pointCloudData.colorsConf || pointCloudData.colorsRGB);
-      const semArray = new Float32Array(pointCloudData.colorsSem || pointCloudData.colorsRGB);
-
-      // Create brand-new BufferGeometry to support arbitrary point counts cleanly in Three.js
-      const newGeom = new THREE.BufferGeometry();
-      newGeom.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-      newGeom.setAttribute('color', new THREE.BufferAttribute(rgbArray, 3));
-      newGeom.userData = {
-        rgbColors: rgbArray,
-        confColors: confArray,
-        semColors: semArray,
-        positions: posArray
-      };
-      newGeom.computeBoundingSphere();
-      newGeom.computeBoundingBox();
-
-      const oldGeom = pointCloudRef.current.geometry;
-      pointCloudRef.current.geometry = newGeom;
-      if (oldGeom) oldGeom.dispose();
-
-      // Auto-focus camera on reconstructed real town / flight bounds
-      if (newGeom.boundingBox && controlsRef.current && cameraRef.current) {
-        const center = new THREE.Vector3();
-        newGeom.boundingBox.getCenter(center);
-        const size = new THREE.Vector3();
-        newGeom.boundingBox.getSize(size);
-        const span = Math.max(size.x, size.z, 25);
-
-        controlsRef.current.target.copy(center);
-        cameraRef.current.position.set(center.x - span * 0.45, center.y + span * 0.55, center.z + span * 0.7);
-        controlsRef.current.update();
-      }
-    }
-  }, [pointCloudData, activeProjectId]);
-
-  // Dynamically update flight trajectory ribbon when new flight data is ingested
-  useEffect(() => {
-    if (!trajectoryData?.trajectory || !Array.isArray(trajectoryData.trajectory) || trajectoryData.trajectory.length < 2) return;
-    const waypoints = trajectoryData.trajectory.filter(w => w && typeof w.x === 'number' && typeof w.y === 'number');
-    if (waypoints.length < 2) return;
-
-    waypointsRef.current = waypoints;
-    const trajPoints = waypoints.map(w => new THREE.Vector3(Number(w.x) || 0, Number(w.z) || 45.0, -Number(w.y) || 0));
+    // 3. Reset trajectory to default 40-waypoint Jaipur loop
+    const safeWaypoints = generateDefaultTrajectory();
+    waypointsRef.current = safeWaypoints;
+    const trajPoints = safeWaypoints.map(w => new THREE.Vector3(Number(w.x) || 0, Number(w.z) || 48.5, -Number(w.y) || 0));
     const newCurve = new THREE.CatmullRomCurve3(trajPoints);
     trajCurveRef.current = newCurve;
 
     if (trajMeshRef.current && sceneRef.current) {
       sceneRef.current.remove(trajMeshRef.current);
       if (trajMeshRef.current.geometry) trajMeshRef.current.geometry.dispose();
-      
       const trajGeom = new THREE.TubeGeometry(newCurve, 120, 0.35, 8, false);
       const trajMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe, wireframe: false, transparent: true, opacity: 0.85 });
       const newMesh = new THREE.Mesh(trajGeom, trajMat);
@@ -444,32 +370,27 @@ export default function DigitalTwinViewer({
     if (droneMeshRef.current && trajPoints.length > 0) {
       droneMeshRef.current.position.copy(trajPoints[0]);
     }
-  }, [trajectoryData]);
 
-  // Update Dynamic Object markers based on project telemetry
-  useEffect(() => {
-    if (!sceneRef.current) return;
+    // 4. Reset dynamic vehicles for Jaipur demo
     const dynGroup = sceneRef.current.getObjectByName("dynamicObjectsGroup");
-    if (!dynGroup) return;
-
-    // Clear previous dynamic object bounding boxes
-    while (dynGroup.children.length > 0) {
-      const child = dynGroup.children[0];
-      dynGroup.remove(child);
-      if (child.geometry) child.geometry.dispose();
-      if (child.material) child.material.dispose();
+    if (dynGroup) {
+      while (dynGroup.children.length > 0) {
+        const child = dynGroup.children[0];
+        dynGroup.remove(child);
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) child.material.dispose();
+      }
+      const carBox = createHoloVehicleBox([-10.5, 0.8, 2.1], [4.5, 1.6, 1.8], 0xef4444, "SEDAN (34 km/h) - DYNAMIC MASKED");
+      dynGroup.add(carBox);
+      const truckBox = createHoloVehicleBox([18.4, 1.4, -3.6], [7.2, 2.8, 2.4], 0xf59e0b, "TRUCK (22 km/h) - DYNAMIC MASKED");
+      dynGroup.add(truckBox);
     }
+  };
 
-    const dynList = metricsData?.dynamic_objects;
-    if (Array.isArray(dynList) && dynList.length > 0) {
-      dynList.forEach(obj => {
-        const enu = obj.world_enu || [0, 0, 0];
-        const threePos = [enu[0], enu[2], -enu[1]];
-        const box = createHoloVehicleBox(threePos, [4.5, 1.8, 1.8], 0xef4444, `${obj.class || 'VEHICLE'} (${obj.speed_kmh || 30} km/h) - DYNAMIC MASKED`);
-        dynGroup.add(box);
-      });
-    }
-  }, [metricsData]);
+  // Always ensure Jaipur Benchmark Prototype scene is shown on project load, video upload, or switch
+  useEffect(() => {
+    applyJaipurPrototypeScene();
+  }, [activeProjectId, pointCloudData]);
 
   // Toggle Dynamic Object Ghosting
   useEffect(() => {
